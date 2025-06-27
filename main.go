@@ -1,12 +1,56 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
+
+func getWords(filepath string) ([]string, error) {
+	// Open the file.
+	file, err := os.Open(filepath)
+	if err != nil {
+		return nil, fmt.Errorf("error opening file: %w", err)
+	}
+	// Ensure the file is closed when the function exits.
+	defer func(file *os.File) {
+		err := file.Close()
+		if err != nil {
+			fmt.Printf("error closing file: %v\n", err)
+		}
+	}(file)
+
+	var lines []string
+	// Create a new scanner to read line by line.
+	scanner := bufio.NewScanner(file)
+
+	// Iterate through each line in the file.
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text()) // Append the current line (as text) to the slice.
+	}
+
+	// Check for any errors during scanning.
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading file: %w", err)
+	}
+
+	return lines, nil
+}
+
+func getRandomWords(numWords int) string {
+	words, _ := getWords("words.txt")
+	wordList := make([]string, numWords)
+	for i := 0; i < numWords; i++ {
+		rand.Intn(len(words))
+	}
+
+	return strings.Join(wordList, " ")
+}
 
 type model struct {
 	input     string
@@ -30,7 +74,7 @@ func initialModel() model {
 	return model{}
 }
 
-// Update function: handle input & state changes
+// Update function: handle input and state changes
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
@@ -76,8 +120,8 @@ func (m model) Init() tea.Cmd {
 /*
 ESSENTIAL:
 1. Generate a list of 100 words
-2. On first key input, start a timer
-3. For each key input, check if letter is correct or incorrect
+2. On first key input, start timer
+3. For each key input, check if a letter is correct or incorrect
 
 NICE TO HAVE:
 1. Live WPM calculation
