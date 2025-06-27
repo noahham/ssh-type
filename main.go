@@ -52,14 +52,12 @@ func getRandomWords(numWords int) string {
 	return strings.Join(wordList, " ")
 }
 
+// Defines model structure
 type model struct {
 	input     string
 	started   bool
 	startTime time.Time
 }
-
-// Define messages
-type tickMsg time.Time
 
 func main() {
 	p := tea.NewProgram(initialModel())
@@ -114,13 +112,11 @@ Time elapsed: %.1fs
 `, m.input, elapsed)
 }
 
-func (m model) Init() tea.Cmd {
-	return nil
-}
+func (m model) Init() tea.Cmd { return nil }
 
 /*
 ESSENTIAL:
-1. Generate a list of 100 words
+1. Generate a list of x words
 2. On first key input, start timer
 3. For each key input, check if a letter is correct or incorrect
 
