@@ -46,7 +46,7 @@ func getRandomWords(numWords int) string {
 	words, _ := getWords("words.txt")
 	wordList := make([]string, numWords)
 	for i := 0; i < numWords; i++ {
-		rand.Intn(len(words))
+		wordList[i] = words[rand.Intn(len(words))]
 	}
 
 	return strings.Join(wordList, " ")
@@ -63,7 +63,8 @@ type tickMsg time.Time
 
 func main() {
 	p := tea.NewProgram(initialModel())
-	if err := p.Start(); err != nil {
+	_, err := p.Run()
+	if err != nil {
 		fmt.Println("Error running program:", err)
 		os.Exit(1)
 	}
@@ -71,7 +72,7 @@ func main() {
 
 // Initial state
 func initialModel() model {
-	return model{}
+	return model{input: getRandomWords(10)}
 }
 
 // Update function: handle input and state changes
@@ -87,7 +88,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.started = true
 				m.startTime = time.Now()
 			}
-			m.input = ""
+			m.input = getRandomWords(10)
 		case "backspace":
 			if len(m.input) > 0 {
 				m.input = m.input[:len(m.input)-1]
