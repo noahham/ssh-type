@@ -72,9 +72,26 @@ func main() {
 
 // Initial state
 func initialModel() model {
+	textStyles := make(map[string]lipgloss.Style)
+	textStyles["typed"] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#ffffff")).
+		Width(59)
+	textStyles["notTyped"] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#595959")).
+		Width(59)
+	textStyles["header"] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#ffffff")).
+		PaddingTop(2)
+	textStyles["timer"] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#ff0000")).
+		Width(59).
+		Align(lipgloss.Center).
+		PaddingTop(1)
+
 	return model{
 		input:    getRandomWords(10),
 		timeLeft: 30,
+		styles:   textStyles,
 	}
 }
 
@@ -128,19 +145,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, m.tick() // schedule next tick
 	}
-
 	return m, nil
 }
 
 // View function: render UI
 func (m model) View() string {
-	return fmt.Sprintf(`
-Type something! (Press Enter to reset, Esc to quit)
+	header := m.styles["header"].Render("[esc] Exit | [enter] Reset | [1] Live WPM | [2] Change Time\n-----------------------------------------------------------")
 
-> %s
+	untyped := m.styles["notTyped"].Render(m.input)
+	timer := m.styles["timer"].Render(fmt.Sprintf("%ds", m.timeLeft))
 
-Time Left: %ds
-`, m.input, m.timeLeft)
+	return lipgloss.JoinVertical(lipgloss.Top,
+		header,
+		"",
+		untyped,
+		"",
+		timer,
+	)
 }
 
 func (m model) Init() tea.Cmd { return nil }
@@ -154,6 +175,5 @@ ESSENTIAL:
 NICE TO HAVE:
 1. Live WPM calculation
 2. Limit inputs to length of word
-3. Customizable text size
-4. Customizable cursor color
+3. Customizable cursor color
 */
