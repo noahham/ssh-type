@@ -3,16 +3,16 @@ package main
 import (
 	"bufio"
 	"fmt"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"math"
 	"math/rand"
 	"os"
 	"strings"
 	"time"
-
-	tea "github.com/charmbracelet/bubbletea"
 )
 
-func getWords(filepath string) ([]string, error) {
+func makeWordList(filepath string) ([]string, error) {
 	// Open the file.
 	file, err := os.Open(filepath)
 	if err != nil {
@@ -44,7 +44,7 @@ func getWords(filepath string) ([]string, error) {
 }
 
 func getRandomWords(numWords int) string {
-	words, _ := getWords("words.txt")
+	words, _ := makeWordList("words.txt")
 	wordList := make([]string, numWords)
 	for i := 0; i < numWords; i++ {
 		wordList[i] = words[rand.Intn(len(words))]
@@ -53,11 +53,27 @@ func getRandomWords(numWords int) string {
 	return strings.Join(wordList, " ")
 }
 
-func calculateWPM(words int, timeLeft int) int {
-	if words == 0 && timeLeft == 0 {
-		return 0
+func calculateWPM(typed string, toType string, timeLeft int, totalTime int) float32 {
+	if len(typed) < len(toType) {
+		toType = toType[:len(typed)]
 	}
-	return words / 12 // TODO: Implement the live timer
+	wordCount := len(strings.Fields(toType))
+	accuracy := getAccuracy(typed, toType)
+	timeElapsed := totalTime - timeLeft
+
+	return float32(math.Round(float64((float32(wordCount)/float32(timeElapsed))*60*accuracy)*10) / 10)
+}
+
+func getAccuracy(a, b string) float32 {
+	correct := 0
+	for i := range a {
+		if a[i] != b[i] {
+			correct++
+		}
+	}
+
+	correctness := float32(correct) / float32(len(a))
+	return correctness
 }
 
 type model struct {
@@ -73,11 +89,11 @@ type model struct {
 func initialModel() model {
 	textStyles := make(map[string]lipgloss.Style)
 	textStyles["typed"] = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#ffffff")).
-		Height(3)
+		Foreground(lipgloss.Color("#ffffff"))
 	textStyles["notTyped"] = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#595959")).
-		Height(3)
+		Foreground(lipgloss.Color("#595959"))
+	textStyles["incorrect"] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#ff5f5f"))
 	textStyles["header"] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#ffffff")).
 		PaddingTop(2)
@@ -127,6 +143,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.started = false
 
 			m.toType = getRandomWords(50)
+			m.typed = ""
 			m.timeLeft = m.timeSetting
 
 		case "backspace":
@@ -149,13 +166,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.liveWPM = !m.liveWPM
 
 		default:
-			m.typed += msg.String()
-			if msg.String()[0] == m.toType[0] {
-
-			}
-			if !m.started {
-				m.started = true
-				return m, m.tick() // Start the timer on first input
+			// Only allow A–Z or a–z keys
+			if len(msg.String()) == 1 {
+				r := rune(msg.String()[0])
+				if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == ' ' {
+					if m.timeLeft != 0 && len(m.typed) < len(m.toType) {
+						m.typed += string(r)
+						if !m.started {
+							m.started = true
+							return m, m.tick() // Start the timer on first input
+						}
+					}
+				}
 			}
 		}
 
@@ -197,7 +219,7 @@ func (m model) View() string {
 			if r == targetRunes[i] {
 				typedStyled.WriteString(m.styles["typed"].Render(string(r)))
 			} else {
-				typedStyled.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5f5f")).Render(string(r))) // red for wrong
+				typedStyled.WriteString(m.styles["incorrect"].Render(string(r))) // red for wrong
 			}
 		}
 	}
@@ -213,7 +235,7 @@ func (m model) View() string {
 
 	var info string
 	if m.liveWPM {
-		info = m.styles["timer"].Render(fmt.Sprintf("%ds", m.timeLeft) + "    " + fmt.Sprint(12)) // TODO: Replace 12 with actual WPM calculation
+		info = m.styles["timer"].Render(fmt.Sprintf("%ds", m.timeLeft) + "    " + fmt.Sprint(calculateWPM(m.typed, m.toType, m.timeLeft, m.timeSetting)))
 	} else {
 		info = m.styles["timer"].Render(fmt.Sprintf("%ds", m.timeLeft))
 	}
@@ -240,12 +262,7 @@ func main() {
 }
 
 /*
-ESSENTIAL:
-1. Generate a list of x words
-2. On first key input, start timer
-3. For each key input, check if a letter is correct or incorrect
-
-NICE TO HAVE:
-1. Live WPM calculation
-2. Limit inputs to length of word
+Build finish screen
+Make words shorter?
+render 3 lines of text at a time
 */
