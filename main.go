@@ -53,34 +53,30 @@ func getRandomWords(numWords int) string {
 	return strings.Join(wordList, " ")
 }
 
-// Defines model structure
+func calculateWPM(words int, timeLeft int) int {
+	if words == 0 && timeLeft == 0 {
+		return 0
+	}
+	return words / 12 // TODO: Implement the live timer
+}
+
 type model struct {
-	input       string
+	toType      string
+	typed       string
 	started     bool
 	timeLeft    int
 	styles      map[string]lipgloss.Style
 	timeSetting int
+	liveWPM     bool
 }
 
-func main() {
-	p := tea.NewProgram(initialModel())
-	_, err := p.Run()
-	if err != nil {
-		fmt.Println("Error running program:", err)
-		os.Exit(1)
-	}
-}
-
-// Initial state
 func initialModel() model {
 	textStyles := make(map[string]lipgloss.Style)
 	textStyles["typed"] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#ffffff")).
-		Width(54).
 		Height(3)
 	textStyles["notTyped"] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#595959")).
-		Width(54).
 		Height(3)
 	textStyles["header"] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#ffffff")).
@@ -95,13 +91,17 @@ func initialModel() model {
 		Width(54).
 		Align(lipgloss.Center).
 		PaddingTop(1)
+	textStyles["width"] = lipgloss.NewStyle().
+		Width(54)
 
 	return model{
-		input:       getRandomWords(50),
+		toType:      getRandomWords(50),
+		typed:       "",
 		styles:      textStyles,
 		started:     false,
 		timeLeft:    30, // Default time setting
 		timeSetting: 30,
+		liveWPM:     false,
 	}
 }
 
@@ -116,7 +116,6 @@ func (m model) tick() tea.Cmd {
 	return nil
 }
 
-// Update function: handle input and state changes
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
@@ -127,12 +126,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "enter":
 			m.started = false
 
-			m.input = getRandomWords(50)
+			m.toType = getRandomWords(50)
 			m.timeLeft = m.timeSetting
 
 		case "backspace":
-			if len(m.input) > 0 {
-				m.input = m.input[:len(m.input)-1]
+			runes := []rune(m.typed)
+			if len(runes) > 0 {
+				m.typed = string(runes[:len(runes)-1])
 			}
 
 		case "1":
@@ -145,8 +145,14 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.timeLeft = m.timeSetting
 
+		case "2":
+			m.liveWPM = !m.liveWPM
+
 		default:
-			m.input += msg.String()
+			m.typed += msg.String()
+			if msg.String()[0] == m.toType[0] {
+
+			}
 			if !m.started {
 				m.started = true
 				return m, m.tick() // Start the timer on first input
@@ -169,7 +175,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// View function: render UI
 func (m model) View() string {
 	keybind := m.styles["keybind"].Render
 	header := m.styles["header"].Render
@@ -182,20 +187,57 @@ func (m model) View() string {
 	)
 
 	headerLine := m.styles["spacer"].Render("------------------------------------------------------")
-	untyped := m.styles["notTyped"].Render(m.input)
-	timer := m.styles["timer"].Render(fmt.Sprintf("%ds", m.timeLeft))
+
+	typedRunes := []rune(m.typed)
+	targetRunes := []rune(m.toType)
+
+	var typedStyled strings.Builder
+	for i, r := range typedRunes {
+		if i < len(targetRunes) {
+			if r == targetRunes[i] {
+				typedStyled.WriteString(m.styles["typed"].Render(string(r)))
+			} else {
+				typedStyled.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("#ff5f5f")).Render(string(r))) // red for wrong
+			}
+		}
+	}
+
+	remaining := ""
+	if len(typedRunes) < len(targetRunes) {
+		remaining = string(targetRunes[len(typedRunes):])
+	}
+
+	words := m.styles["width"].Render(
+		typedStyled.String() + m.styles["notTyped"].Render(remaining),
+	)
+
+	var info string
+	if m.liveWPM {
+		info = m.styles["timer"].Render(fmt.Sprintf("%ds", m.timeLeft) + "    " + fmt.Sprint(12)) // TODO: Replace 12 with actual WPM calculation
+	} else {
+		info = m.styles["timer"].Render(fmt.Sprintf("%ds", m.timeLeft))
+	}
 
 	return lipgloss.JoinVertical(lipgloss.Top,
 		keybinds,
 		headerLine,
 		"",
-		untyped,
+		words,
 		"",
-		timer,
+		info,
 	)
 }
 
 func (m model) Init() tea.Cmd { return nil }
+
+func main() {
+	p := tea.NewProgram(initialModel())
+	_, err := p.Run()
+	if err != nil {
+		fmt.Println("Error running program:", err)
+		os.Exit(1)
+	}
+}
 
 /*
 ESSENTIAL:
