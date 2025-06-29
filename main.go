@@ -55,10 +55,11 @@ func getRandomWords(numWords int) string {
 
 // Defines model structure
 type model struct {
-	input    string
-	started  bool
-	timeLeft int
-	styles   map[string]lipgloss.Style
+	input       string
+	started     bool
+	timeLeft    int
+	styles      map[string]lipgloss.Style
+	timeSetting int
 }
 
 func main() {
@@ -75,23 +76,32 @@ func initialModel() model {
 	textStyles := make(map[string]lipgloss.Style)
 	textStyles["typed"] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#ffffff")).
-		Width(59)
+		Width(54).
+		Height(3)
 	textStyles["notTyped"] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#595959")).
-		Width(59)
+		Width(54).
+		Height(3)
 	textStyles["header"] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#ffffff")).
 		PaddingTop(2)
+	textStyles["spacer"] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#ffffff"))
+	textStyles["keybind"] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#595959")).
+		PaddingTop(2)
 	textStyles["timer"] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#ff0000")).
-		Width(59).
+		Width(54).
 		Align(lipgloss.Center).
 		PaddingTop(1)
 
 	return model{
-		input:    getRandomWords(10),
-		timeLeft: 30,
-		styles:   textStyles,
+		input:       getRandomWords(50),
+		styles:      textStyles,
+		started:     false,
+		timeLeft:    30, // Default time setting
+		timeSetting: 30,
 	}
 }
 
@@ -112,18 +122,29 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "ctrl+c", "esc":
+		case "esc":
 			return m, tea.Quit
 		case "enter":
 			m.started = false
 
-			m.input = getRandomWords(10)
-			m.timeLeft = 40
+			m.input = getRandomWords(50)
+			m.timeLeft = m.timeSetting
 
 		case "backspace":
 			if len(m.input) > 0 {
 				m.input = m.input[:len(m.input)-1]
 			}
+
+		case "1":
+			if m.timeSetting == 15 {
+				m.timeSetting = 30
+			} else if m.timeSetting == 30 {
+				m.timeSetting = 45
+			} else {
+				m.timeSetting = 15
+			}
+			m.timeLeft = m.timeSetting
+
 		default:
 			m.input += msg.String()
 			if !m.started {
@@ -150,13 +171,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View function: render UI
 func (m model) View() string {
-	header := m.styles["header"].Render("[esc] Exit | [enter] Reset | [1] Live WPM | [2] Change Time\n-----------------------------------------------------------")
+	keybind := m.styles["keybind"].Render
+	header := m.styles["header"].Render
 
+	keybinds := lipgloss.JoinHorizontal(lipgloss.Top,
+		keybind(" esc"), header(" Exit "),
+		header(" |  "), keybind("enter"), header(" Reset "),
+		header(" |  "), keybind("1"), header(" Length "),
+		header(" |  "), keybind("2"), header(" Live WPM"),
+	)
+
+	headerLine := m.styles["spacer"].Render("------------------------------------------------------")
 	untyped := m.styles["notTyped"].Render(m.input)
 	timer := m.styles["timer"].Render(fmt.Sprintf("%ds", m.timeLeft))
 
 	return lipgloss.JoinVertical(lipgloss.Top,
-		header,
+		keybinds,
+		headerLine,
 		"",
 		untyped,
 		"",
@@ -175,5 +206,4 @@ ESSENTIAL:
 NICE TO HAVE:
 1. Live WPM calculation
 2. Limit inputs to length of word
-3. Customizable cursor color
 */
