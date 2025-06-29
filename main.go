@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/charmbracelet/lipgloss"
 	"math/rand"
 	"os"
 	"strings"
@@ -54,9 +55,10 @@ func getRandomWords(numWords int) string {
 
 // Defines model structure
 type model struct {
-	input     string
-	started   bool
-	startTime time.Time
+	input    string
+	started  bool
+	timeLeft int
+	styles   map[string]lipgloss.Style
 }
 
 func main() {
@@ -70,7 +72,21 @@ func main() {
 
 // Initial state
 func initialModel() model {
-	return model{input: getRandomWords(10)}
+	return model{
+		input:    getRandomWords(10),
+		timeLeft: 30,
+	}
+}
+
+type tickMsg time.Time
+
+func (m model) tick() tea.Cmd {
+	if m.started {
+		return tea.Tick(time.Second, func(t time.Time) tea.Msg {
+			return tickMsg(t)
+		})
+	}
+	return nil
 }
 
 // Update function: handle input and state changes
@@ -82,18 +98,35 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+c", "esc":
 			return m, tea.Quit
 		case "enter":
-			if !m.started {
-				m.started = true
-				m.startTime = time.Now()
-			}
+			m.started = false
+
 			m.input = getRandomWords(10)
+			m.timeLeft = 40
+
 		case "backspace":
 			if len(m.input) > 0 {
 				m.input = m.input[:len(m.input)-1]
 			}
 		default:
 			m.input += msg.String()
+			if !m.started {
+				m.started = true
+				return m, m.tick() // Start the timer on first input
+			}
 		}
+
+	case tickMsg:
+		if !m.started {
+			return m, nil // Don't tick or decrement time if not started
+		}
+		if m.timeLeft > 0 {
+			m.timeLeft--
+		}
+		if m.timeLeft == 0 {
+			m.started = false // auto-stop
+			return m, nil
+		}
+		return m, m.tick() // schedule next tick
 	}
 
 	return m, nil
@@ -101,15 +134,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 // View function: render UI
 func (m model) View() string {
-	elapsed := time.Since(m.startTime).Seconds()
-
 	return fmt.Sprintf(`
 Type something! (Press Enter to reset, Esc to quit)
 
 > %s
 
-Time elapsed: %.1fs
-`, m.input, elapsed)
+Time Left: %ds
+`, m.input, m.timeLeft)
 }
 
 func (m model) Init() tea.Cmd { return nil }
