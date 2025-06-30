@@ -54,20 +54,31 @@ func getRandomWords(numWords int) string {
 }
 
 func calculateWPM(typed string, toType string, timeLeft int, totalTime int) float32 {
+	if typed == "" {
+		return 0
+	}
+
 	if len(typed) < len(toType) {
 		toType = toType[:len(typed)]
 	}
+
 	wordCount := len(strings.Fields(toType))
 	accuracy := getAccuracy(typed, toType)
 	timeElapsed := totalTime - timeLeft
+	if timeElapsed <= 0 {
+		return 0
+	}
 
-	return float32(math.Round(float64((float32(wordCount)/float32(timeElapsed))*60*accuracy)*10) / 10)
+	rawWPM := (float32(wordCount) / float32(timeElapsed)) * 60
+	adjustedWPM := rawWPM * accuracy
+
+	return float32(math.Round(float64(adjustedWPM)*10) / 10)
 }
 
 func getAccuracy(a, b string) float32 {
 	correct := 0
 	for i := range a {
-		if a[i] != b[i] {
+		if a[i] == b[i] {
 			correct++
 		}
 	}
@@ -147,9 +158,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.timeLeft = m.timeSetting
 
 		case "backspace":
-			runes := []rune(m.typed)
-			if len(runes) > 0 {
-				m.typed = string(runes[:len(runes)-1])
+			if m.timeLeft != 0 {
+				runes := []rune(m.typed)
+				if len(runes) > 0 {
+					m.typed = string(runes[:len(runes)-1])
+				}
 			}
 
 		case "1":
@@ -265,4 +278,5 @@ func main() {
 Build finish screen
 Make words shorter?
 render 3 lines of text at a time
+Center the whole thing (GPT cooking??)
 */
