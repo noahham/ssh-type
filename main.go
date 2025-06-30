@@ -83,7 +83,7 @@ func getAccuracy(toType string, typed string, backspaceErrors int) float32 {
 		}
 	}
 
-	correctness := float32(correct+backspaceErrors) / float32(len(toType))
+	correctness := float32(correct) / float32(len(toType)+backspaceErrors)
 	return correctness
 }
 
@@ -116,11 +116,12 @@ func initialModel() model {
 		PaddingTop(2)
 	textStyles["timer"] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#ff0000")).
-		Width(54).
-		Align(lipgloss.Center).
 		PaddingTop(1)
 	textStyles["width"] = lipgloss.NewStyle().
-		Width(54)
+		Width(56)
+	textStyles["widthAndCenter"] = lipgloss.NewStyle().
+		Width(56).
+		Align(lipgloss.Center)
 
 	return model{
 		toType:          getRandomWords(50),
@@ -219,12 +220,12 @@ func (m model) View() string {
 	if m.timeLeft != 0 {
 		keybinds := lipgloss.JoinHorizontal(lipgloss.Top,
 			keybind(" esc"), header(" Exit "),
-			header(" |  "), keybind("enter"), header(" Reset "),
+			header(" |  "), keybind("enter"), header(" Restart "),
 			header(" |  "), keybind("1"), header(" Length "),
 			header(" |  "), keybind("2"), header(" Live WPM"),
 		)
 
-		headerLine := m.styles["spacer"].Render("------------------------------------------------------")
+		headerLine := m.styles["spacer"].Render("--------------------------------------------------------")
 
 		typedRunes := []rune(m.typed)
 		targetRunes := []rune(m.toType)
@@ -251,9 +252,9 @@ func (m model) View() string {
 
 		var info string
 		if m.liveWPM {
-			info = m.styles["timer"].Render(fmt.Sprintf("%ds", m.timeLeft) + "    " + fmt.Sprint(calculateWPM(m.typed, m.toType, m.timeLeft, m.timeSetting, m.backspaceErrors)))
+			info = m.styles["timer"].Width(56).Align(lipgloss.Center).Render(fmt.Sprintf("%ds", m.timeLeft) + "    " + fmt.Sprint(calculateWPM(m.typed, m.toType, m.timeLeft, m.timeSetting, m.backspaceErrors)))
 		} else {
-			info = m.styles["timer"].Render(fmt.Sprintf("%ds", m.timeLeft))
+			info = m.styles["timer"].Width(56).Align(lipgloss.Center).Render(fmt.Sprintf("%ds", m.timeLeft))
 		}
 
 		return lipgloss.JoinVertical(lipgloss.Top,
@@ -273,7 +274,16 @@ func (m model) View() string {
 			keybind("    Accuracy "),
 			header(fmt.Sprintf("%.0f%%", getAccuracy(m.toType[:len(m.typed)], m.typed, m.backspaceErrors)*100)),
 		)
-		return summary
+
+		reset := lipgloss.JoinHorizontal(lipgloss.Top,
+			m.styles["timer"].Foreground(lipgloss.Color("#595959")).Render("enter "),
+			m.styles["timer"].Foreground(lipgloss.Color("#ffffff")).Render("Restart"),
+		)
+
+		return lipgloss.JoinVertical(lipgloss.Top,
+			m.styles["widthAndCenter"].Render(summary),
+			m.styles["widthAndCenter"].Render(reset),
+		)
 	}
 }
 
@@ -289,7 +299,6 @@ func main() {
 }
 
 /*
-Build finish screen
 Make words shorter?
 render 3 lines of text at a time
 Center the whole thing (GPT cooking??)
