@@ -299,7 +299,6 @@ func main() {
 }
 
 /*
-Make words shorter?
 render 3 lines of text at a time
 Center the whole thing (GPT cooking??)
 */
