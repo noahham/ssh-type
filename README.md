@@ -1,6 +1,6 @@
 # SSH-Type
 
-The first ever (?) command-line typing test. This project was heavily inspired by `MonkeyType` and `terminal.shop`.
+The first ever (?) command-line typing test. This project was heavily inspired by MonkeyType and `terminal.shop`.
 
 ## How it Works
 
