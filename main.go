@@ -124,6 +124,9 @@ func initialModel() model {
 	textStyles["widthAndCenter"] = lipgloss.NewStyle().
 		Width(56).
 		Align(lipgloss.Center)
+	textStyles["cursor"] = lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#000000")).
+		Background(lipgloss.Color("#ffffff"))
 
 	return model{
 		toType:          getRandomWords(50),
@@ -224,6 +227,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	keybind := m.styles["keybind"].Render
 	header := m.styles["header"].Render
+
 	if m.timeLeft != 0 {
 		keybinds := lipgloss.JoinHorizontal(lipgloss.Top,
 			keybind(" esc"), header(" Exit "),
@@ -250,7 +254,14 @@ func (m model) View() string {
 
 		remaining := ""
 		if len(typedRunes) < len(targetRunes) {
-			remaining = string(targetRunes[len(typedRunes):])
+			remainingRunes := targetRunes[len(typedRunes):]
+
+			if len(remainingRunes) > 0 {
+				first := string(remainingRunes[0]) // The first untyped character is the cursor
+				rest := string(remainingRunes[1:])
+
+				remaining = m.styles["cursor"].Render(first) + m.styles["notTyped"].Render(rest)
+			}
 		}
 
 		words := m.styles["width"].Render(
