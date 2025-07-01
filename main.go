@@ -13,12 +13,12 @@ import (
 )
 
 func makeWordList(filepath string) ([]string, error) {
-	// Open the file.
+	// Reads a file and returns a slice of strings, each representing a line in the file.
 	file, err := os.Open(filepath)
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %w", err)
 	}
-	// Ensure the file is closed when the function exits.
+
 	defer func(file *os.File) {
 		err := file.Close()
 		if err != nil {
@@ -27,12 +27,10 @@ func makeWordList(filepath string) ([]string, error) {
 	}(file)
 
 	var lines []string
-	// Create a new scanner to read line by line.
 	scanner := bufio.NewScanner(file)
 
-	// Iterate through each line in the file.
 	for scanner.Scan() {
-		lines = append(lines, scanner.Text()) // Append the current line (as text) to the slice.
+		lines = append(lines, scanner.Text())
 	}
 
 	// Check for any errors during scanning.
@@ -44,6 +42,7 @@ func makeWordList(filepath string) ([]string, error) {
 }
 
 func getRandomWords(numWords int) string {
+	// Gets numWords random words from a file named "words.txt"
 	words, _ := makeWordList("words.txt")
 	wordList := make([]string, numWords)
 	for i := 0; i < numWords; i++ {
@@ -54,6 +53,7 @@ func getRandomWords(numWords int) string {
 }
 
 func calculateWPM(typed string, toType string, timeLeft int, totalTime int, backspaceErrors int) float32 {
+	// Calculates the WPM based on the typed text, the text to type, time left, total time, and backspace errors.
 	if typed == "" {
 		return 0
 	}
@@ -76,6 +76,7 @@ func calculateWPM(typed string, toType string, timeLeft int, totalTime int, back
 }
 
 func getAccuracy(toType string, typed string, backspaceErrors int) float32 {
+	// Calculates the accuracy of the typed text compared to the text to type.
 	correct := 0
 	for i := range toType {
 		if toType[i] == typed[i] {
@@ -101,6 +102,7 @@ type model struct {
 }
 
 func initialModel() model {
+	// Defining text styles map using lipgloss
 	textStyles := make(map[string]lipgloss.Style)
 	textStyles["typed"] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#ffffff"))
@@ -129,12 +131,12 @@ func initialModel() model {
 		Background(lipgloss.Color("#ffffff"))
 
 	return model{
-		toType:          getRandomWords(50),
+		toType:          getRandomWords(50), // Sets 50 random words as text
 		typed:           "",
 		styles:          textStyles,
 		started:         false,
-		timeLeft:        30, // Default time setting
-		timeSetting:     30,
+		timeLeft:        30,
+		timeSetting:     30, // Default time is 30s
 		liveWPMEnabled:  false,
 		backspaceErrors: 0,
 	}
@@ -143,6 +145,7 @@ func initialModel() model {
 type tickMsg time.Time
 
 func (m model) tick() tea.Cmd {
+	// Returns a command to tick every second if the timer has already started
 	if m.started {
 		return tea.Tick(time.Second, func(t time.Time) tea.Msg {
 			return tickMsg(t)
@@ -152,6 +155,7 @@ func (m model) tick() tea.Cmd {
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	// Updates the model state based on the received message
 	switch msg := msg.(type) {
 
 	case tea.WindowSizeMsg:
@@ -161,16 +165,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "esc":
+		case "esc": // Quit
 			return m, tea.Quit
-		case "enter":
+		case "enter": // Restart
 			m.started = false
 
 			m.toType = getRandomWords(50)
 			m.typed = ""
 			m.timeLeft = m.timeSetting
 
-		case "backspace":
+		case "backspace": // Backspace
 			if m.timeLeft != 0 {
 				m.backspaceErrors++
 				runes := []rune(m.typed)
@@ -179,7 +183,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			}
 
-		case "1":
+		case "1": // Change Length
 			if m.timeSetting == 15 {
 				m.timeSetting = 30
 			} else if m.timeSetting == 30 {
@@ -192,11 +196,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.typed = ""
 			m.backspaceErrors = 0
 
-		case "2":
+		case "2": // Enable/Disable Live WPM
 			m.liveWPMEnabled = !m.liveWPMEnabled
 
-		default:
-			// Only allow A–Z or a–z keys
+		default: // Normal Typing
+			// Only allows A–Z or a–z keys
 			if len(msg.String()) == 1 {
 				r := rune(msg.String()[0])
 				if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == ' ' {
@@ -231,11 +235,13 @@ func (m model) View() string {
 	keybind := m.styles["keybind"].Render
 	header := m.styles["header"].Render
 
+	// If the window is too small...
 	if m.windowWidth < 56 || m.windowHeight < 13 {
 		message := m.styles["header"].Render("Terminal is too small!")
 		return lipgloss.Place(m.windowWidth, m.windowHeight, lipgloss.Center, lipgloss.Center, message)
 	}
 
+	// If the timer is running, show the typing interface
 	if m.timeLeft != 0 {
 		keybinds := lipgloss.JoinHorizontal(lipgloss.Top,
 			keybind(" esc"), header(" Exit "),
@@ -293,7 +299,7 @@ func (m model) View() string {
 		)
 
 		return lipgloss.Place(m.windowWidth, m.windowHeight, lipgloss.Center, lipgloss.Center, noCenter)
-	} else {
+	} else { // If the timer has stopped, show the summary
 		wpm := calculateWPM(m.typed, m.toType, m.timeLeft, m.timeSetting, m.backspaceErrors)
 
 		summary := lipgloss.JoinHorizontal(lipgloss.Top,
@@ -327,8 +333,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-
-/*
-render 3 lines of text at a time
-deploy to ssh
-*/
