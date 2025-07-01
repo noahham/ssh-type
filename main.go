@@ -94,7 +94,7 @@ type model struct {
 	timeLeft        int
 	styles          map[string]lipgloss.Style
 	timeSetting     int
-	liveWPM         bool
+	liveWPMEnabled  bool
 	backspaceErrors int // Count of backspace errors
 	windowWidth     int
 	windowHeight    int
@@ -135,7 +135,7 @@ func initialModel() model {
 		started:         false,
 		timeLeft:        30, // Default time setting
 		timeSetting:     30,
-		liveWPM:         false,
+		liveWPMEnabled:  false,
 		backspaceErrors: 0,
 	}
 }
@@ -188,9 +188,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.timeSetting = 15
 			}
 			m.timeLeft = m.timeSetting
+			m.started = false
+			m.typed = ""
+			m.backspaceErrors = 0
 
 		case "2":
-			m.liveWPM = !m.liveWPM
+			m.liveWPMEnabled = !m.liveWPMEnabled
 
 		default:
 			// Only allow A–Z or a–z keys
@@ -227,6 +230,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	keybind := m.styles["keybind"].Render
 	header := m.styles["header"].Render
+
+	if m.windowWidth < 56 || m.windowHeight < 13 {
+		message := m.styles["header"].Render("Terminal is too small!")
+		return lipgloss.Place(m.windowWidth, m.windowHeight, lipgloss.Center, lipgloss.Center, message)
+	}
 
 	if m.timeLeft != 0 {
 		keybinds := lipgloss.JoinHorizontal(lipgloss.Top,
@@ -269,7 +277,7 @@ func (m model) View() string {
 		)
 
 		var info string
-		if m.liveWPM {
+		if m.liveWPMEnabled {
 			info = m.styles["timer"].Width(56).Align(lipgloss.Center).Render(fmt.Sprintf("%ds", m.timeLeft) + "    " + fmt.Sprint(calculateWPM(m.typed, m.toType, m.timeLeft, m.timeSetting, m.backspaceErrors)))
 		} else {
 			info = m.styles["timer"].Width(56).Align(lipgloss.Center).Render(fmt.Sprintf("%ds", m.timeLeft))
@@ -322,5 +330,5 @@ func main() {
 
 /*
 render 3 lines of text at a time
-Cursor?
+deploy to ssh
 */
