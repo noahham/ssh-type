@@ -96,6 +96,8 @@ type model struct {
 	timeSetting     int
 	liveWPM         bool
 	backspaceErrors int // Count of backspace errors
+	windowWidth     int
+	windowHeight    int
 }
 
 func initialModel() model {
@@ -148,6 +150,11 @@ func (m model) tick() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+
+	case tea.WindowSizeMsg:
+		m.windowWidth = msg.Width
+		m.windowHeight = msg.Height
+		return m, nil
 
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -257,7 +264,7 @@ func (m model) View() string {
 			info = m.styles["timer"].Width(56).Align(lipgloss.Center).Render(fmt.Sprintf("%ds", m.timeLeft))
 		}
 
-		return lipgloss.JoinVertical(lipgloss.Top,
+		noCenter := lipgloss.JoinVertical(lipgloss.Top,
 			keybinds,
 			headerLine,
 			"",
@@ -265,6 +272,8 @@ func (m model) View() string {
 			"",
 			info,
 		)
+
+		return lipgloss.Place(m.windowWidth, m.windowHeight, lipgloss.Center, lipgloss.Center, noCenter)
 	} else {
 		wpm := calculateWPM(m.typed, m.toType, m.timeLeft, m.timeSetting, m.backspaceErrors)
 
@@ -280,17 +289,19 @@ func (m model) View() string {
 			m.styles["timer"].Foreground(lipgloss.Color("#ffffff")).Render("Restart"),
 		)
 
-		return lipgloss.JoinVertical(lipgloss.Top,
+		noCenter := lipgloss.JoinVertical(lipgloss.Top,
 			m.styles["widthAndCenter"].Render(summary),
 			m.styles["widthAndCenter"].Render(reset),
 		)
+
+		return lipgloss.Place(m.windowWidth, m.windowHeight, lipgloss.Center, lipgloss.Center, noCenter)
 	}
 }
 
 func (m model) Init() tea.Cmd { return nil }
 
 func main() {
-	p := tea.NewProgram(initialModel())
+	p := tea.NewProgram(initialModel(), tea.WithAltScreen())
 	_, err := p.Run()
 	if err != nil {
 		fmt.Println("Error running program:", err)
@@ -300,5 +311,5 @@ func main() {
 
 /*
 render 3 lines of text at a time
-Center the whole thing (GPT cooking??)
+Cursor?
 */
