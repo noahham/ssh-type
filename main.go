@@ -103,7 +103,6 @@ type model struct {
 
 func initialModel() model {
 	// Defining text styles map using lipgloss
-	// lipgloss.AdaptiveColor{Light: "04B575", Dark: "04B575"}
 	textStyles := make(map[string]lipgloss.Style)
 	textStyles["typed"] = lipgloss.NewStyle().
 		Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"})
@@ -128,8 +127,8 @@ func initialModel() model {
 		Width(56).
 		Align(lipgloss.Center)
 	textStyles["cursor"] = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#000000")).
-		Background(lipgloss.Color("#ffffff"))
+		Foreground(lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#000000"}).
+		Background(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"})
 
 	return model{
 		toType:          getRandomWords(50), // Sets 50 random words as text
