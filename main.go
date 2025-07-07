@@ -103,18 +103,19 @@ type model struct {
 
 func initialModel() model {
 	// Defining text styles map using lipgloss
+	// lipgloss.AdaptiveColor{Light: "04B575", Dark: "04B575"}
 	textStyles := make(map[string]lipgloss.Style)
 	textStyles["typed"] = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#ffffff"))
+		Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"})
 	textStyles["notTyped"] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#595959"))
 	textStyles["incorrect"] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#ff5f5f"))
 	textStyles["header"] = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#ffffff")).
+		Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}).
 		PaddingTop(2)
 	textStyles["spacer"] = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#ffffff"))
+		Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"})
 	textStyles["keybind"] = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#595959")).
 		PaddingTop(2)
@@ -311,7 +312,7 @@ func (m model) View() string {
 
 		reset := lipgloss.JoinHorizontal(lipgloss.Top,
 			m.styles["timer"].Foreground(lipgloss.Color("#595959")).Render("enter "),
-			m.styles["timer"].Foreground(lipgloss.Color("#ffffff")).Render("Restart"),
+			m.styles["timer"].Foreground(lipgloss.AdaptiveColor{Light: "#000000", Dark: "#ffffff"}).Render("Restart"),
 		)
 
 		noCenter := lipgloss.JoinVertical(lipgloss.Top,
